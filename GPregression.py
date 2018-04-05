@@ -152,7 +152,32 @@ def negative_log_marginal_likelihood(lntheta, xob,yob, eval_gradient=False):
 #def obj_func(lntheta, xob,yob, eval_gradient=True):
 #    if eval_gradient:
 #        lml, grad = log_marginal_likelihood(lntheta, xob,yob, eval_gradient=True)
-#    return -lml, -grad   
+#    return -lml, -grad  
+def plot_eigspectrum (eigs,gridsize,sharpness):        
+        neweig = eigs/max(eigs)
+        gmax = 1
+        gmin = min(neweig)
+        lines = gridsize
+        x1 = np.linspace(gmin,gmax,lines)
+        sharpness = (1e-4)
+        y1 = 0;
+        for i in range(0, len(neweig)):
+            y1 = y1+(1/float(len(neweig)))*mlab.normpdf(x1, neweig[i], sharpness)
+        fig = plt.figure()
+
+#        titlespectra = ['Spectral Density: \
+#                        loglikelihood=' + str(log_likelihood) + \
+#                        'RMSE=' + str(RME)]
+        line1, = plt.plot(x1,y1, label="Gaussians")
+        fig = plt.gca()
+        #set log or normal plot
+        fig.set_xlim([gmin,1])
+        fig.set_xscale('log')
+        maxy = max([max(y1)])
+        fig.set_ylim([0,maxy])
+        plt.rcParams["figure.figsize"] = (10,10)
+#        plt.title(titlespectra)
+        
 def print_coord(lntheta):
         global xob,yob,xtest
         d = xob.shape[1]
@@ -165,8 +190,8 @@ def print_coord(lntheta):
         Kn = kernel(xob)
         
         # compute eigenvalues of the covariance matrix
-        eigs = np.linalg.eigvals(Kn)
-        neweig = eigs/max(eigs)
+        eigs = np.linalg.eigvalsh(Kn)
+#        neweig = eigs/max(eigs)
 
         # log likelihood
         log_likelihood = - negative_log_marginal_likelihood(lntheta, xob,yob, eval_gradient=False)
@@ -177,65 +202,120 @@ def print_coord(lntheta):
         RME=np.mean(np.sqrt((ypred-ftest)**2))
 
         # plot the eigen spectrum using Gaussian kernel smoothing
-        gmax = 1
-        gmin = min(neweig)
-        lines = 1e4+1
-        x1 = np.linspace(gmin,gmax,lines)
-        sharpness = (1e-4)
-        y1 = 0;
-        for i in range(0, len(neweig)):
-            y1 = y1+(1/float(len(neweig)))*mlab.normpdf(x1, neweig[i], sharpness)
-        fig = plt.figure()
-
-        titlespectra = ['Spectral Density: \
-                        loglikelihood=' + str(log_likelihood) + \
-                        'RMSE=' + str(RME)]
-        line1, = plt.plot(x1,y1, label="Gaussians")
-        fig = plt.gca()
-        #set log or normal plot
-        fig.set_xlim([gmin,1])
-        fig.set_xscale('log')
-        maxy = max([max(y1)])
-        fig.set_ylim([0,maxy])
-        plt.rcParams["figure.figsize"] = (10,10)
+        plot_eigspectrum (eigs,1e4+1,1e-4)       
+        titlespectra = ['Spectral Density: loglikelihood=' + str(log_likelihood) + \
+                        ';  RMSE=' + str(RME)]
+        
         plt.title(titlespectra)
+#        neweig = eigs/max(eigs)
+#        gmax = 1
+#        gmin = min(neweig)
+#        lines = 1e4+1
+#        x1 = np.linspace(gmin,gmax,lines)
+#        sharpness = (1e-4)
+#        y1 = 0;
+#        for i in range(0, len(neweig)):
+#            y1 = y1+(1/float(len(neweig)))*mlab.normpdf(x1, neweig[i], sharpness)
+#        fig = plt.figure()
+#
+#        line1, = plt.plot(x1,y1, label="Gaussians")
+#        fig = plt.gca()
+#        #set log or normal plot
+#        fig.set_xlim([gmin,1])
+#        fig.set_xscale('log')
+#        maxy = max([max(y1)])
+#        fig.set_ylim([0,maxy])
+#        plt.rcParams["figure.figsize"] = (10,10)
+###############################################################################
+###############################################################################
 
-#        first_legend = plt.legend(handles=[line1], loc=1)
-#
-#        # Add the legend manually to the current Axes.
-#        ax = plt.gca().add_artist(first_legend)
-#
-#        plt.title(titlespectra)
-#        plt.show()
-#        THETA = (xk[0],xk[1],xk[2],xk[3])
-#        print('Log Marginal Likelihood = '+str(gp.log_marginal_likelihood(theta=THETA, eval_gradient=False)))
-#        gp1 = gaussian_process.GaussianProcessRegressor(kernel=kernelfin)
-#        print(gp1)
-#        gp1.fit(X, y)
-#        #x_pred = np.linspace(-6, 6).reshape(-1,1)
-#        x_pred = x.reshape(-1,1)
-#        y_pred, sigma = gp1.predict(x_pred, return_std=True)
-#        print('RMSE = '+str(np.sqrt(sum((y-y_pred)**2/len(y)))))
-#        #print(y_pred)
-#        #print(gp1.predict(x_pred))
-#        plt.figure(figsize=(10,8))
-#        sns.regplot(x, y, fit_reg=False, label='Data')
-#        plt.plot(x_pred, y_pred, color='blue', label='Prediction')
-#        #c = 0.3
-#        #d = 0.3
-#        #xtruth = np.linspace(-6,6,101)
-#        #ytruth = c*np.sin(xtruth)**3
-#        #plt.plot(xtruth, ytruth, color='red', label='Truth')
-#        plt.fill(np.concatenate([x_pred, x_pred[::-1]]),
-#                 np.concatenate([y_pred - 2*sigma,
-#                                (y_pred + 2*sigma)[::-1]]),
-#                 alpha=.5, fc='grey', ec='None', label='95% CI')
-#        plt.xlabel('$x$')
-#        plt.ylabel('$f(x)$')
-#        plt.xlim(-6, 6)
-#        plt.ylim(-3, 3)
-#        plt.legend(loc='lower left');
-#        plt.show()
+# compute negative marginal likelihood based on clean covariance
+def negative_log_marginal_likelihood_clean(lntheta, xob,yob,m):
+    n,d = xob.shape
+    theta=np.exp(lntheta)
+    s=theta[0]
+    l = theta[1:d+1]
+    varn = theta[d+1]
+    kernel = ConstantKernel(constant_value=s) * RBF(length_scale=l)+ WhiteKernel(noise_level=varn)# +ConstantKernel() + Matern(length_scale=2, nu=3/2)
+    K = kernel(xob)
+    # specify the number of eigvalue outliers, m 
+#    m = 100
+    # generate the outlier eigenvalues and corresponding eigenvectors
+    eigs_trucated, V_trucated = sp.sparse.linalg.eigsh(K, k = m)
+
+#    eigs,V = np.linalg.eigh(K)   # v[:, i] is each normalised eigenvacetor 
+#    eigs_trucated = eigs[-m:]
+#    V_trucated = V[:,-m:]
+    # construct the covariance matrix based on the outliers
+    #C_mm = np.dot(V_trucated, np.diag(eigs_trucated)).dot(V_trucated.T)
+    # compute the floor eigenvalue and normalised random vectors 
+    eig_0 = (np.trace(K) - sum(eigs_trucated))/(n-m)
+    Z = np.random.randn(n,n-m) 
+    Z = Z / sp.linalg.norm(Z, axis=0)
+    # compute likelihood terms 
+    T1 = (n-m) * np.log(eig_0)
+    T2 = np.sum( np.log(eigs_trucated) )
+    T3 = np.sum( ( np.dot(yob.T, V_trucated)** 2 ) / eigs_trucated )
+    T4 = np.sum( ( np.dot(yob.T, Z) ** 2 ) / eig_0 )
+    T5 = n * np.log(2* np.pi)
+    
+    L = 0.5 * (T1 + T2 + T3 + T4 + T5)
+    return L
+
+# compute posterior mean and variance based on clean covariance
+def posterior_clean(xtest,xob,theta,m):
+    n,d = xob.shape
+    s=theta[0]
+    l = theta[1:d+1]
+    varn = theta[d+1]
+    #    n = xob.shape[0]
+    '''return the mean and covariance matrix of the predictive distribution'''
+    # computes the noisy kernel using RBF method
+    kerneln = ConstantKernel(constant_value=s) * RBF(length_scale=l)+ WhiteKernel(noise_level=varn) 
+    kernel = ConstantKernel(constant_value=s) * RBF(length_scale=l)
+    Kn = kerneln(xob)
+    
+    # specify the number of eigvalue outliers, m 
+    # generate the outlier eigenvalues and corresponding eigenvectors
+    eigs_trucated, V_trucated = sp.sparse.linalg.eigsh(Kn, k = m)
+    # construct the covariance matrix based on the outliers
+    C_mm = np.dot(V_trucated, np.diag(eigs_trucated)).dot(V_trucated.T)
+    # compute the floor eigenvalue and normalised random vectors 
+    eig_0 = (np.trace(Kn) - sum(eigs_trucated))/(n-m)
+    Z = np.random.randn(n,n-m) 
+    Z = Z / sp.linalg.norm(Z, axis=0)
+    # construct the covariance matrix based on the floor eigenvalues and random vector
+    C_nm = np.dot(Z, eig_0 * np.eye(n-m)).dot(Z.T)
+    # construct the clean covariance matrix
+    C_clean = C_mm + C_nm
+    
+    # kernel between new and old data points
+    K_newob=kernel(xtest,xob) 
+    # kernel between new data points
+    K_new=kernel(xtest)
+    
+    #% compute mean for posterior
+    try:
+        invK_f=np.linalg.solve(C_clean,yob)
+    except np.linalg.linalg.LinAlgError as err:
+        if 'Singular matrix' in err.message:
+            
+            invK_f=np.linalg.lstsq(C_clean,yob)[0]       
+        else:
+            raise
+    mean_po=K_newob.dot(invK_f)
+    
+    # compute covariance matrix/kernel for posterior
+    try:
+        invK_K=np.linalg.solve(C_clean,K_newob.T)
+    except np.linalg.linalg.LinAlgError as err:
+        if 'Singular matrix' in err.message:
+            
+            invK_K=np.linalg.lstsq(C_clean,K_newob.T)[0]       
+        else:
+            raise
+    cov_po=K_new-np.dot(K_newob,invK_K) 
+    return [mean_po,cov_po]
         
 #%% Get Boston Housing Data
 #Boston Housing Dataset
@@ -254,27 +334,112 @@ xob, xtest, y_train, y_test = train_test_split(tranx, trany, test_size=0.1, rand
 yob = y_train[:,None]
 ftest = y_test[:,None]
 
-#%% set initial hyperparameter values
+#% set initial hyperparameter values
 dim = xob.shape[1]
 l = list(np.ones(dim))
 theta0 = np.array([10]+l+[1e-6])
 lntheta_01 = np.log(theta0)
 #ypred,ypred = posterior(xtest,xob,theta0)
 
-#% optimise hyperparameters using MLE
+#%% optimise hyperparameters using MLE
 NL = lambda lntheta: negative_log_marginal_likelihood(lntheta, xob,yob, eval_gradient=False)
 dNL = lambda lntheta: negative_log_marginal_likelihood(lntheta, xob,yob, eval_gradient=True)
 #bnds=((0,1e4),(0.0,1.0),(0.0,1.0),(0,1))
 res = minimize(NL, lntheta_01, method='L-BFGS-B',jac=dNL, tol=1e-6,callback=print_coord)
+#res = minimize(NL, lntheta_01, method='L-BFGS-B',jac=dNL, tol=1e-6)
 
 #% run GP regression using the optmal hyperparameter set
 theta_opt = np.exp(res.x)
 ypred,covpred = posterior(xtest,xob,theta_opt)
 #%  Compute the rms error
-E=np.sqrt((ypred-ftest)**2)
+RMSE=np.mean( np.sqrt((ypred-ftest)**2) )
 # print mean rms error
-print(np.mean(E))
+print(RMSE)
 
+#%% optimise hyperparameters using MLE for clean covariance
+m = 100
+NL_clean = lambda lntheta: negative_log_marginal_likelihood_clean(lntheta, xob,yob,m)
+res = minimize(NL_clean, lntheta_01, method='L-BFGS-B', tol=1e-6)
+
+#%% run GP regression using the optmal hyperparameter set
+theta_opt = np.exp(res.x)
+ypred,covpred = posterior_clean(xtest,xob,theta_opt,m)
+#%  Compute the rms error
+RMSE=np.mean( np.sqrt((ypred-ftest)**2) )
+# print mean rms error
+print(RMSE) 
+
+
+#%% Kernel spectral analysis
+theta_opt = np.exp(res.x)
+n,d = xob.shape
+#theta=np.exp(lntheta)
+s=theta_opt[0]
+l = theta_opt[1:d+1]
+varn = theta_opt[d+1]
+kernel = ConstantKernel(constant_value=s) * RBF(length_scale=l)+ WhiteKernel(noise_level=varn)# +ConstantKernel() + Matern(length_scale=2, nu=3/2)
+C = kernel(xob)
+# C = V Eig V.T
+eigs,V = np.linalg.eigh(C)   # v[:, i] is each normalised eigenvacetor 
+
+#% Check C =  sum_i eig_i * v_i * v_i.T
+#C2 = 0
+#for i in range(V.shape[1]):
+#    v = V[:,i][:,None]
+#    eig = eigs[i]
+#    C2 +=  eig * v.dot(v.T)
+
+# specify the number of eigvalue outliers, m 
+m = 100
+#neweig = eigs/max(eigs)
+#diff_eigs = np.diff(neweig)
+# generate the outlier eigenvalues and corresponding eigenvectors
+eigs_trucated = eigs[-m:]
+V_trucated = V[:,-m:]
+# construct the covariance matrix based on the outliers
+C_mm = np.dot(V_trucated, np.diag(eigs_trucated)).dot(V_trucated.T)
+# compute the floor eigenvalue and normalised random vectors 
+eig_0 = (np.trace(C) - sum(eigs_trucated))/(n-m)
+Z = np.random.randn(n,n-m) 
+Z = Z / sp.linalg.norm(Z, axis=0)
+# construct the covariance matrix based on the floor eigenvalues and random vector
+C_nm = np.dot(Z, eig_0 * np.eye(n-m)).dot(Z.T)
+# construct the clean covariance matrix
+C_clean = C_mm + C_nm
+
+eigs_clean,V_clean = np.linalg.eigh(C_clean)   # v[:, i] is each normalised eigenvacetor 
+
+# % visualise the eigen-spectrum 
+plot_eigspectrum (eigs_clean,1e4+1,1e-4)
+#plot_eigspectrum (eigs,1e4+1,1e-4)
+
+
+#plot_eigspectrum (eigs_trucated,1e4+1,1e-2)
+#%% check prediction performance
+Kn = C_clean
+# kernel between new and old data points
+K_newob=kernel(xtest,xob) 
+# kernel between new data points
+K_new=kernel(xtest,xtest)
+
+#% compute mean for posterior
+invK_f=np.linalg.solve(Kn,yob)
+mean_po=K_newob.dot(invK_f)
+RME=np.mean(np.sqrt((mean_po-ftest)**2))
+
+
+
+#%% 
+
+
+
+
+
+
+
+
+#%% log likelihood based on clean covariance matrix
+#L = − log p(y|θ) = 0.5 ( (n−m) log λ0+  log λi+  |⟨y|φi⟩|2+   |⟨y|z⟩|2+n log(2π) ) 
 
 #%%
 ##L = np.array([0.3,0.3])
