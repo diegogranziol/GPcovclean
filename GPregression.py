@@ -345,8 +345,9 @@ lntheta_01 = np.log(theta0)
 NL = lambda lntheta: negative_log_marginal_likelihood(lntheta, xob,yob, eval_gradient=False)
 dNL = lambda lntheta: negative_log_marginal_likelihood(lntheta, xob,yob, eval_gradient=True)
 #bnds=((0,1e4),(0.0,1.0),(0.0,1.0),(0,1))
-res = minimize(NL, lntheta_01, method='L-BFGS-B',jac=dNL, tol=1e-6,callback=print_coord)
-#res = minimize(NL, lntheta_01, method='L-BFGS-B',jac=dNL, tol=1e-6)
+#res = minimize(NL, lntheta_01, method='L-BFGS-B',jac=dNL, tol=1e-6,callback=print_coord)
+res = minimize(NL, lntheta_01, method='L-BFGS-B',jac=dNL, tol=1e-6)
+#res = minimize(NL, lntheta_01, method='L-BFGS-B', tol=1e-6)
 
 #% run GP regression using the optmal hyperparameter set
 theta_opt = np.exp(res.x)
@@ -411,7 +412,7 @@ eigs_clean,V_clean = np.linalg.eigh(C_clean)   # v[:, i] is each normalised eige
 
 # % visualise the eigen-spectrum 
 plot_eigspectrum (eigs_clean,1e4+1,1e-4)
-#plot_eigspectrum (eigs,1e4+1,1e-4)
+plot_eigspectrum (eigs,1e4+1,1e-4)
 
 
 #plot_eigspectrum (eigs_trucated,1e4+1,1e-2)

@@ -86,6 +86,7 @@ def negative_log_marginal_likelihood_clean(lntheta, xob,yob,m):
 #    m = 100
     # generate the outlier eigenvalues and corresponding eigenvectors
     eigs_trucated, V_trucated = sp.sparse.linalg.eigsh(K, k = m)
+#    eigs_trucated, V_trucated  = np.linalg.eigh(Kn)
 
 #    eigs,V = np.linalg.eigh(K)   # v[:, i] is each normalised eigenvacetor 
 #    eigs_trucated = eigs[-m:]
@@ -94,6 +95,7 @@ def negative_log_marginal_likelihood_clean(lntheta, xob,yob,m):
     #C_mm = np.dot(V_trucated, np.diag(eigs_trucated)).dot(V_trucated.T)
     # compute the floor eigenvalue and normalised random vectors 
     eig_0 = (np.trace(K) - sum(eigs_trucated))/(n-m)
+    np.random.seed(1)
     Z = np.random.randn(n,n-m) 
     Z = Z / sp.linalg.norm(Z, axis=0)
     # compute likelihood terms 
@@ -122,10 +124,13 @@ def posterior_clean(xtest,xob,theta,m):
     # specify the number of eigvalue outliers, m 
     # generate the outlier eigenvalues and corresponding eigenvectors
     eigs_trucated, V_trucated = sp.sparse.linalg.eigsh(Kn, k = m)
+#    eigs_trucated, V_trucated  = np.linalg.eigh(Kn)
     # construct the covariance matrix based on the outliers
     C_mm = np.dot(V_trucated, np.diag(eigs_trucated)).dot(V_trucated.T)
     # compute the floor eigenvalue and normalised random vectors 
     eig_0 = (np.trace(Kn) - sum(eigs_trucated))/(n-m)
+#    eig_0 = 0
+    np.random.seed(1)
     Z = np.random.randn(n,n-m) 
     Z = Z / sp.linalg.norm(Z, axis=0)
     # construct the covariance matrix based on the floor eigenvalues and random vector
@@ -152,7 +157,7 @@ def posterior_clean(xtest,xob,theta,m):
     # compute covariance matrix/kernel for posterior
     try:
         invK_K=np.linalg.solve(C_clean,K_newob.T)
-    except np.linalg.linalg.LinAlgError as err:
+z    except np.linalg.linalg.LinAlgError as err:
         if 'Singular matrix' in err.message:
             
             invK_K=np.linalg.lstsq(C_clean,K_newob.T)[0]       
@@ -186,7 +191,7 @@ lntheta_01 = np.log(theta0)
 
 
 #%% optimise hyperparameters using MLE for clean covariance
-m = 100
+m = 298
 NL_clean = lambda lntheta: negative_log_marginal_likelihood_clean(lntheta, xob,yob,m)
 res = minimize(NL_clean, lntheta_01, method='L-BFGS-B', tol=1e-6)
 
