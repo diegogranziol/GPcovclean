@@ -192,7 +192,8 @@ def print_coord(lntheta):
         # compute eigenvalues of the covariance matrix
         eigs = np.linalg.eigvalsh(Kn)
 #        neweig = eigs/max(eigs)
-
+        eigs_trucated = eigs[-m:]
+        V_trucated = V[:,-m:]
         # log likelihood
         log_likelihood = - negative_log_marginal_likelihood(lntheta, xob,yob, eval_gradient=False)
 
@@ -241,28 +242,70 @@ def negative_log_marginal_likelihood_clean(lntheta, xob,yob,m):
     # specify the number of eigvalue outliers, m 
 #    m = 100
     # generate the outlier eigenvalues and corresponding eigenvectors
-    eigs_trucated, V_trucated = sp.sparse.linalg.eigsh(K, k = m)
+#    eigs,V = np.linalg.eigh(K)
+#    eigs_trucated, V_trucated = sp.sparse.linalg.eigsh(K, k = m)
 
-#    eigs,V = np.linalg.eigh(K)   # v[:, i] is each normalised eigenvacetor 
-#    eigs_trucated = eigs[-m:]
-#    V_trucated = V[:,-m:]
+    eigs,V = np.linalg.eigh(K)   # v[:, i] is each normalised eigenvacetor 
+    eigs_trucated = eigs[-m:]
+    V_trucated = V[:,-m:]
+    # construct the covariance matrix based on the outliers
+#    C_mm = np.dot(V_trucated, np.diag(eigs_trucated)).dot(V_trucated.T)
+    # compute the floor eigenvalue and normalised random vectors 
+    eig_0 = (np.trace(K) - sum(eigs_trucated))/(n-m)
+    np.random.seed(124)
+    Z = np.random.randn(n,n-m) 
+    Z = Z / sp.linalg.norm(Z, axis=0)
+    
+    # compute likelihood terms 
+    T2 = np.sum( np.log(eigs_trucated) )
+    T3 = np.sum( ( np.dot(yob.T, V_trucated)** 2 ) / eigs_trucated )
+#    T4 = 0
+#    T1 = 0
+    T1 = (n-m) * np.log(eig_0)
+    T4 = np.sum( ( np.dot(yob.T, Z) ** 2 ) / eig_0 )
+    T5 = n * np.log(2* np.pi)
+    
+    L = 0.5 * ( T1+ T2 + T3+T4 + T5)
+
+    return L
+
+def negative_log_marginal_likelihood_clean2(lntheta, xob,yob,m):
+    n,d = xob.shape
+    theta=np.exp(lntheta)
+    s=theta[0]
+    l = theta[1:d+1]
+    varn = theta[d+1]
+    kernel = ConstantKernel(constant_value=s) * RBF(length_scale=l)+ WhiteKernel(noise_level=varn)# +ConstantKernel() + Matern(length_scale=2, nu=3/2)
+    K = kernel(xob)
+    # specify the number of eigvalue outliers, m 
+#    m = 100
+    # generate the outlier eigenvalues and corresponding eigenvectors
+#    eigs,V = np.linalg.eigh(K)
+#    eigs_trucated, V_trucated = sp.sparse.linalg.eigsh(K, k = m)
+
+    eigs,V = np.linalg.eigh(K)   # v[:, i] is each normalised eigenvacetor 
+    eigs_trucated = eigs[-m:]
+    V_trucated = V[:,-m:]
     # construct the covariance matrix based on the outliers
     #C_mm = np.dot(V_trucated, np.diag(eigs_trucated)).dot(V_trucated.T)
     # compute the floor eigenvalue and normalised random vectors 
     eig_0 = (np.trace(K) - sum(eigs_trucated))/(n-m)
-    np.random.seed(3)
-    Z = np.random.randn(n,n-m) 
-    Z = Z / sp.linalg.norm(Z, axis=0)
+#    np.random.seed(124)
+#    Z = np.random.randn(n,n-m) 
+#    Z = Z / sp.linalg.norm(Z, axis=0)
+    Z = V[:,0:n-m]
     # compute likelihood terms 
     T2 = np.sum( np.log(eigs_trucated) )
     T3 = np.sum( ( np.dot(yob.T, V_trucated)** 2 ) / eigs_trucated )
-    T4 = 0
-    T1 = 0
-#    T1 = (n-m) * np.log(eig_0)
+#    T4 = 0
+#    T1 = 0
+    T1 = (n-m) * np.log(eig_0)
 #    T4 = np.sum( ( np.dot(yob.T, Z) ** 2 ) / eig_0 )
+    T4 = ( np.dot(yob.T, yob)  ) / eig_0 
+
     T5 = n * np.log(2* np.pi)
     
-    L = 0.5 * (T1 + T2 + T3 + T4 + T5)
+    L = 0.5 * ( T1+T4+T2 + T3  + T5)
 
     return L
 
@@ -278,22 +321,24 @@ def posterior_clean(xtest,xob,theta,m):
     kerneln = ConstantKernel(constant_value=s) * RBF(length_scale=l)+ WhiteKernel(noise_level=varn) 
     kernel = ConstantKernel(constant_value=s) * RBF(length_scale=l)
     Kn = kerneln(xob)
-    
+    np.random.seed(3)
+
     # specify the number of eigvalue outliers, m 
     # generate the outlier eigenvalues and corresponding eigenvectors
-    eigs_trucated, V_trucated = sp.sparse.linalg.eigsh(Kn, k = m)
+#    eigs_trucated, V_trucated = sp.sparse.linalg.eigsh(Kn, k = m)
+    eigs_trucated, V_trucated  = np.linalg.eigh(Kn)
 
     # construct the covariance matrix based on the outliers
     C_mm = np.dot(V_trucated, np.diag(eigs_trucated)).dot(V_trucated.T)
     # compute the floor eigenvalue and normalised random vectors 
-#    eig_0 = (np.trace(Kn) - sum(eigs_trucated))/(n-m)
-#    np.random.seed(3)
-#    Z = np.random.randn(n,n-m) 
-#    Z = Z / sp.linalg.norm(Z, axis=0)
-    # construct the covariance matrix based on the floor eigenvalues and random vector
-#    C_nm = np.dot(Z, eig_0 * np.eye(n-m)).dot(Z.T)
-    # construct the clean covariance matrix
-#    C_clean = C_mm + C_nm
+    eig_0 = (np.trace(Kn) - sum(eigs_trucated))/(n-m)
+    np.random.seed(124)
+    Z = np.random.randn(n,n-m) 
+    Z = Z / sp.linalg.norm(Z, axis=0)
+#     construct the covariance matrix based on the floor eigenvalues and random vector
+    C_nm = np.dot(Z, eig_0 * np.eye(n-m)).dot(Z.T)
+#     construct the clean covariance matrix
+    C_clean = C_mm + C_nm
     C_clean = C_mm
     # kernel between new and old data points
     K_newob=kernel(xtest,xob) 
@@ -322,7 +367,67 @@ def posterior_clean(xtest,xob,theta,m):
             raise
     cov_po=K_new-np.dot(K_newob,invK_K) 
     return [mean_po,cov_po]
-        
+       
+# compute posterior mean and variance based on clean covariance
+def posterior_clean2(xtest,xob,theta,m):
+    n,d = xob.shape
+    s=theta[0]
+    l = theta[1:d+1]
+    varn = theta[d+1]
+    #    n = xob.shape[0]
+    '''return the mean and covariance matrix of the predictive distribution'''
+    # computes the noisy kernel using RBF method
+    kerneln = ConstantKernel(constant_value=s) * RBF(length_scale=l)+ WhiteKernel(noise_level=varn) 
+    kernel = ConstantKernel(constant_value=s) * RBF(length_scale=l)
+    Kn = kerneln(xob)
+#    np.random.seed(3)
+
+    # specify the number of eigvalue outliers, m 
+    # generate the outlier eigenvalues and corresponding eigenvectors
+#    eigs_trucated, V_trucated = sp.sparse.linalg.eigsh(Kn, k = m)
+    eigs,V = np.linalg.eigh(Kn)   # v[:, i] is each normalised eigenvacetor 
+    eigs_trucated = eigs[-m:]
+    V_trucated = V[:,-m:]
+    # construct the covariance matrix based on the outliers
+    C_mm = np.dot(V_trucated, np.diag(eigs_trucated)).dot(V_trucated.T)
+    # compute the floor eigenvalue and normalised random vectors 
+    eig_0 = (np.trace(Kn) - sum(eigs_trucated))/(n-m)
+#    np.random.seed(124)
+#    Z = np.random.randn(n,n-m) 
+#    Z = Z / sp.linalg.norm(Z, axis=0)
+    Z = V[:,0:n-m]
+#     construct the covariance matrix based on the floor eigenvalues and random vector
+    C_nm = np.dot(Z, eig_0 * np.eye(n-m)).dot(Z.T)
+#     construct the clean covariance matrix
+    C_clean = C_mm + C_nm
+#    C_clean = C_mm
+    # kernel between new and old data points
+    K_newob=kernel(xtest,xob) 
+    # kernel between new data points
+    K_new=kernel(xtest)
+    
+    #% compute mean for posterior
+    try:
+        invK_f=np.linalg.solve(C_clean,yob)
+    except np.linalg.linalg.LinAlgError as err:
+        if 'Singular matrix' in err.message:
+            
+            invK_f=np.linalg.lstsq(C_clean,yob)[0]       
+        else:
+            raise
+    mean_po=K_newob.dot(invK_f)
+    
+    # compute covariance matrix/kernel for posterior
+    try:
+        invK_K=np.linalg.solve(C_clean,K_newob.T)
+    except np.linalg.linalg.LinAlgError as err:
+        if 'Singular matrix' in err.message:
+            
+            invK_K=np.linalg.lstsq(C_clean,K_newob.T)[0]       
+        else:
+            raise
+    cov_po=K_new-np.dot(K_newob,invK_K) 
+    return [mean_po,cov_po] 
 #%% Get Boston Housing Data
 #Boston Housing Dataset
 cd = 'train.csv'
@@ -366,12 +471,15 @@ print(RMSE)
 
 #%% optimise hyperparameters using MLE for clean covariance
 m = 298
-NL_clean = lambda lntheta: negative_log_marginal_likelihood_clean(lntheta, xob,yob,m)
+NL_clean = lambda lntheta: negative_log_marginal_likelihood_clean2(lntheta, xob,yob,m)
 res = minimize(NL_clean, lntheta_01, method='L-BFGS-B', tol=1e-6)
 
 #%% run GP regression using the optmal hyperparameter set
-theta_opt = np.exp(res.x)
-#ypred,covpred = posterior_clean(xtest,xob,theta_opt,m)
+theta_opt_clean = np.exp(res.x)
+ypred,covpred = posterior_clean2(xtest,xob,theta_opt,m)
+RMSE=np.mean( np.sqrt((ypred-ftest)**2) )
+print(RMSE)
+#%%
 n,d = xob.shape
 s=theta_opt[0]
 l = theta_opt[1:d+1]
@@ -385,7 +493,7 @@ Kn = kerneln(xob)
 
 # specify the number of eigvalue outliers, m 
 # generate the outlier eigenvalues and corresponding eigenvectors
-np.random.seed(3)
+np.random.seed(10)
 eigs_trucated, V_trucated = sp.sparse.linalg.eigsh(Kn, k = m)
 #eigs,V = np.linalg.eigh(Kn)   # v[:, i] is each normalised eigenvacetor 
 #eigs_trucated = eigs[-m:]
@@ -468,7 +576,7 @@ eigs_clean,V_clean = np.linalg.eigh(C_clean)   # v[:, i] is each normalised eige
 
 # % visualise the eigen-spectrum 
 #plot_eigspectrum (eigs_clean,1e4+1,1e-4)
-#plot_eigspectrum (eigs,1e4+1,1e-4)
+plot_eigspectrum (eigs,1e4+1,1e-4)
 
 
 #plot_eigspectrum (eigs_trucated,1e4+1,1e-2)
@@ -488,9 +596,55 @@ print(RME)
 
 
 #%% 
+theta_opt = np.exp(res.x)
+n,d = xob.shape
+s=theta_opt[0]
+l = theta_opt[1:d+1]
+varn = theta_opt[d+1]
+#    n = xob.shape[0]
+'''return the mean and covariance matrix of the predictive distribution'''
+# computes the noisy kernel using RBF method
+kerneln = ConstantKernel(constant_value=s) * RBF(length_scale=l)+ WhiteKernel(noise_level=varn) 
+kernel = ConstantKernel(constant_value=s) * RBF(length_scale=l)
+Kn = kerneln(xob)
+#    np.random.seed(3)
 
+# specify the number of eigvalue outliers, m 
+# generate the outlier eigenvalues and corresponding eigenvectors
+#    eigs_trucated, V_trucated = sp.sparse.linalg.eigsh(Kn, k = m)
+eigs,V = np.linalg.eigh(Kn)   # v[:, i] is each normalised eigenvacetor 
+eigs_trucated = eigs[-m:]
+V_trucated = V[:,-m:]
+# construct the covariance matrix based on the outliers
+C_mm = np.dot(V_trucated, np.diag(eigs_trucated)).dot(V_trucated.T)
+# compute the floor eigenvalue and normalised random vectors 
+eig_0 = (np.trace(Kn) - sum(eigs_trucated))/(n-m)
+#    np.random.seed(124)
+#    Z = np.random.randn(n,n-m) 
+#    Z = Z / sp.linalg.norm(Z, axis=0)
+Z = V[:,0:n-m]
+#     construct the covariance matrix based on the floor eigenvalues and random vector
+C_nm = np.dot(Z, eig_0 * np.eye(n-m)).dot(Z.T)
+#     construct the clean covariance matrix
+C_clean = C_mm + C_nm
+#C_clean = C_mm
+# kernel between new and old data points
+K_newob=kernel(xtest,xob) 
+# kernel between new data points
+K_new=kernel(xtest)
 
-
+#% compute mean for posterior
+try:
+    invK_f=np.linalg.solve(C_clean,yob)
+except np.linalg.linalg.LinAlgError as err:
+    if 'Singular matrix' in err.message:
+        
+        invK_f=np.linalg.lstsq(C_clean,yob)[0]       
+    else:
+        raise
+mean_po=K_newob.dot(invK_f)
+RME=np.mean(np.sqrt((mean_po-ftest)**2))
+print(RME)
 
 
 
